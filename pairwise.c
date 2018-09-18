@@ -186,7 +186,9 @@ void *thread_work(void *info){
                 /* Basically we start taking time after some number of runs. */
                 if(iteration == warmup_num){
                     pthread_barrier_wait(&barrier);
-                    if(tid ==0 && me ==0) g_start = MPI_Wtime();
+                    if (me == 0 && tid == 0) {
+                        g_start = MPI_Wtime();
+                    }
                }
 
                 /* sync */
@@ -245,7 +247,7 @@ int perform_test(void){
         pthread_t *id;
         thread_info *t_info;
         int i;
-        int num_threads;
+        int num_threads = x_send_thread;
 
         if (x_send_thread != y_recv_thread ) {
             printf("number of send and recv threads should be the same.\n");
