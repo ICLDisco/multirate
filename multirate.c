@@ -243,15 +243,15 @@ int main(int argc,char **argv)
 			goto get_out;
 		}
 
-        if (me == 0 || me == 1) {
-            shm_ready= (int*) create_shm(mmap_filename, 4);
-            *shm_ready = 0;
-            MPI_Barrier(MPI_COMM_WORLD);
-        } else {
-            MPI_Barrier(MPI_COMM_WORLD);
-            shm_ready = (int*) connect_shm(mmap_filename, 4);
-        }
-
+        /** if (me == 0 || me == 1) { */
+        /**     shm_ready= (int*) create_shm(mmap_filename, 4); */
+        /**     *shm_ready = 0; */
+        /**     MPI_Barrier(MPI_COMM_WORLD); */
+        /** } else { */
+        /**     MPI_Barrier(MPI_COMM_WORLD); */
+        /**     shm_ready = (int*) connect_shm(mmap_filename, 4); */
+        /** } */
+/**  */
         int *sender = (int*)malloc(sizeof(int) * n_send_process);
         int *recver = (int*)malloc(sizeof(int) * m_recv_process);
 
@@ -513,7 +513,9 @@ void test_init(void)
                 case MULTIRATE_MODE_PAIRWISE:
                     if (pairwise_mode == MULTIRATE_PAIRWISE_THREAD_THREAD) {
                         t_info[i].my_pair = (me+1)%2;
-                        t_info[i].comm = comm[i];
+                        t_info[i].comm = MPI_COMM_WORLD;
+                        if (separated_comm)
+                            t_info[i].comm = comm[i];
                     } else if (pairwise_mode == MULTIRATE_PAIRWISE_PROCESS_PROCESS) {
                         /* MULTIRATE_PAIRWISE_PROCESS */
                         t_info[i].comm = comm[i];
@@ -540,23 +542,32 @@ void test_init(void)
             end = MPI_Wtime();
 
             /* write to shm if you are node leader. */
-            if (me == 0 || me == 1)
-                *shm_ready = 1;
+            /** if (me == 0 || me == 1) */
+            /**     *shm_ready = 1; */
 
         } else {
             /* not participant process. Wait for shm ready. */
-            while (*shm_ready == 0) {
-                sleep(3);
-                sched_yield();
-            }
+            /** while (*shm_ready == 0) { */
+            /**     sleep(3); */
+            /**     sched_yield(); */
+            /** } */
         }
         MPI_Barrier(MPI_COMM_WORLD);
 
+        double elapsed_time = end - g_start;
+        double msg_rate = (double)(num_comm * window_size * iter_num)/elapsed_time;
+        double bandwidth = msg_rate * msg_size * 8 / 1000000000;
+        double latency = (double)1000000/msg_rate;
+
+
         /* output message rate */
         if(me == 0) {
-            printf("%d\t%d\t%d\t%d\t\t%lf\n",n_send_process, x_send_thread
-                                            ,m_recv_process, y_recv_thread
-                                            ,(double)(num_comm *window_size*iter_num/(end - g_start)));
+            printf("%d\t%d\t%d\t%d\t\t%.2lf Gbps\t%.2lf usec\t%.2lf msg/s\n", n_send_process, x_send_thread,
+                                              m_recv_process, y_recv_thread,
+                                              bandwidth,
+                                              latency,
+                                              msg_rate);
+
         }
         pthread_barrier_destroy(&barrier);
 }
