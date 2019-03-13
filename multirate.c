@@ -256,11 +256,11 @@ int main(int argc,char **argv)
         int *recver = (int*)malloc(sizeof(int) * m_recv_process);
 
         for (int i = 0; i < n_send_process;i++) {
-            sender[i] = i*2;
+            sender[i] = i;
         }
 
         for (int i = 0; i < m_recv_process;i++) {
-            recver[i] = (i*2)+1;
+            recver[i] = size/2+i;
         }
 
         MPI_Group sender_group, recver_group, world_group;
@@ -271,9 +271,13 @@ int main(int argc,char **argv)
         MPI_Comm_create_group(MPI_COMM_WORLD, sender_group, 0, &sender_comm);
         MPI_Comm_create_group(MPI_COMM_WORLD, recver_group, 0, &recver_comm);
 
-        i_am_sender = (me+1)%2;
-        if ((i_am_sender && me < 2*n_send_process) ||
-                (!(i_am_sender) && me < 2*m_recv_process )) {
+        if (me < size/2)
+            i_am_sender = 1;
+        else
+            i_am_sender = 0;
+
+        if ((i_am_sender && me < n_send_process) ||
+                (!(i_am_sender) && me-(size/2) < m_recv_process )) {
             i_am_participant = 1;
         }
 
@@ -289,7 +293,6 @@ void *comm_alltoall(void *info)
         char *buffer;
         int i,j,k,iteration;
         int offset, comm_offset;
-        int local_rank = me/2;
         double start, end;
 
         buffer = (char*) malloc(msg_size);
@@ -301,6 +304,8 @@ void *comm_alltoall(void *info)
 
         if(i_am_sender){
 
+            int local_rank = me;
+            int receiver_offset = size/2;
             int total_request = m_recv_process * y_recv_thread * window_size;
             MPI_Request request[ total_request ];
             MPI_Status status [ total_request ];
@@ -317,7 +322,7 @@ void *comm_alltoall(void *info)
 
                 for (i = 0; i<m_recv_process;i++) {
                     if(tid ==0 && me == 0)
-                        MPI_Recv(buffer, 1, MPI_BYTE, (2*i)+1, MULTIRATE_RTS_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                        MPI_Recv(buffer, 1, MPI_BYTE, receiver_offset+i, MULTIRATE_RTS_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                         /** printf("%d: recv from %d\n",me, (2*i) +1); */
                 }
                 pthread_barrier_wait(&barrier);
@@ -330,7 +335,7 @@ void *comm_alltoall(void *info)
                         comm_offset = ((local_rank*x_send_thread*y_recv_thread) + (tid * y_recv_thread) + j) * separated_comm;
 
                         for(k=0;k<window_size;k++){
-                            MPI_Isend(buffer, msg_size, MPI_BYTE, (2*i)+1, j, comm[comm_offset], &request[offset+k]);
+                            MPI_Isend(buffer, msg_size, MPI_BYTE, receiver_offset+i, j, comm[comm_offset], &request[offset+k]);
                         }
                     }
                 }
@@ -338,7 +343,7 @@ void *comm_alltoall(void *info)
 
                 if(tid==0){
                     for(i=0;i<m_recv_process;i++){
-                        MPI_Recv(buffer, 1, MPI_BYTE, (2*i)+1, MULTIRATE_SYNC_TAG , MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                        MPI_Recv(buffer, 1, MPI_BYTE, receiver_offset+i, MULTIRATE_SYNC_TAG , MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                      }
                 }
                 pthread_barrier_wait(&barrier);
@@ -366,7 +371,7 @@ void *comm_alltoall(void *info)
                         comm_offset = ((i*x_send_thread*y_recv_thread) + (j * y_recv_thread) + tid ) * separated_comm;
                         /** printf("%d: posting data irecv to %d with tag %d\n",me, (2*i),tid); */
                         for(k=0;k<window_size;k++){
-                            MPI_Irecv(buffer, msg_size, MPI_BYTE, (2*i), tid, comm[comm_offset], &request[offset+k]);
+                            MPI_Irecv(buffer, msg_size, MPI_BYTE, i, tid, comm[comm_offset], &request[offset+k]);
                         }
                     }
                 }
@@ -385,7 +390,7 @@ void *comm_alltoall(void *info)
                 if(tid ==0){
                     for(i=0;i<n_send_process;i++){
                         /** printf("%d: posting fin to %d\n",me,(2*i)); */
-                        MPI_Send(buffer, 1, MPI_BYTE, (2*i), MULTIRATE_SYNC_TAG, MPI_COMM_WORLD);
+                        MPI_Send(buffer, 1, MPI_BYTE, i, MULTIRATE_SYNC_TAG, MPI_COMM_WORLD);
                     }
                 }
                 pthread_barrier_wait(&barrier);
@@ -520,9 +525,9 @@ void test_init(void)
                         /* MULTIRATE_PAIRWISE_PROCESS */
                         t_info[i].comm = comm[i];
                         if (i_am_sender)
-                            t_info[i].my_pair = (me+1);
+                            t_info[i].my_pair = (size/2+me);
                         else
-                            t_info[i].my_pair = (me-1);
+                            t_info[i].my_pair = (me-size/2);
                     }
 
                     pthread_create(&id[i], NULL, comm_pairwise, (void*) &t_info[i]);
