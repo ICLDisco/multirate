@@ -1,9 +1,9 @@
 #!/bin/bash
 
 #SBATCH -N 2
-#SBATCH -t 00:30:00
+#SBATCH -t 02:30:00
 #SBATCH -J OMPI1M
-#SBATCH -p exclusive
+#SBATCH -p shared
 #SBATCH -C alembert
 
 SIZE=1024
@@ -29,8 +29,8 @@ do
         ${WRAP} srun -N 2 -n 2 --ntasks-per-node 1 --exclusive ./multirate -s $SIZE -w $WINDOW -i $ITER -x 1 -y $i -a    | tee -a ${RESULT_PREFIX}_threads
         ${WRAP} srun -N 2 -n 2 --ntasks-per-node 1 --exclusive ./multirate -s $SIZE -w $WINDOW -i $ITER -x 1 -y $i -a -c | tee -a  ${RESULT_PREFIX}_threads_comm
 
-        srun -N 2 -n $ntasks --ntasks-per-node $i --exclusive ./multirate -s $SIZE -w $WINDOW -i $ITER -n 1 -m $i -a         | tee -a ${RESULT_PREFIX}_process_mt
-        srun -N 2 -n $ntasks --ntasks-per-node $i --exclusive ./multirate -s $SIZE -w $WINDOW -i $ITER -n 1 -m $i -a -Dthrds | tee -a ${RESULT_PREFIX}_process
+        ${WRAP} srun -N 2 -n $ntasks --ntasks-per-node $i --exclusive ./multirate -s $SIZE -w $WINDOW -i $ITER -n 1 -m $i -a         | tee -a ${RESULT_PREFIX}_process_mt
+        ${WRAP} srun -N 2 -n $ntasks --ntasks-per-node $i --exclusive ./multirate -s $SIZE -w $WINDOW -i $ITER -n 1 -m $i -a -Dthrds | tee -a ${RESULT_PREFIX}_process
     done
 done
 
