@@ -1,0 +1,38 @@
+#!/bin/bash
+
+#SBATCH -N 2
+#SBATCH -t 00:30:00
+#SBATCH -J OMPI1M
+#SBATCH -p exclusive
+#SBATCH -C alembert
+
+SIZE=1024
+WINDOW=128
+ITER=1000
+
+WRAP="timeout 20s"
+export RESULT_PREFIX="results/ompi_${WINDOW}_${SIZE}_one_many"
+
+module unload mpi
+module load mpi/openmpi
+mpirun --version
+
+cd $HOME/multirate
+make clean >/dev/null
+make > /dev/null
+
+for i in {1..20}
+do
+    ntasks=$((i*2))
+    for j in {1..30}
+    do
+        ${WRAP} srun -N 2 -n 2 --ntasks-per-node 1 --exclusive ./multirate -s $SIZE -w $WINDOW -i $ITER -x 1 -y $i -a    | tee -a ${RESULT_PREFIX}_threads
+        ${WRAP} srun -N 2 -n 2 --ntasks-per-node 1 --exclusive ./multirate -s $SIZE -w $WINDOW -i $ITER -x 1 -y $i -a -c | tee -a  ${RESULT_PREFIX}_threads_comm
+
+        srun -N 2 -n $ntasks --ntasks-per-node $i --exclusive ./multirate -s $SIZE -w $WINDOW -i $ITER -n 1 -m $i -a         | tee -a ${RESULT_PREFIX}_process_mt
+        srun -N 2 -n $ntasks --ntasks-per-node $i --exclusive ./multirate -s $SIZE -w $WINDOW -i $ITER -n 1 -m $i -a -Dthrds | tee -a ${RESULT_PREFIX}_process
+    done
+done
+
+
+

@@ -562,13 +562,15 @@ void test_init(void)
         double elapsed_time = end - g_start;
         double msg_rate = (double)(num_comm * window_size * iter_num)/elapsed_time;
         double bandwidth = msg_rate * msg_size * 8 / 1000000000;
-        double latency = (double)1000000/msg_rate;
+        double latency = (elapsed_time * 1000000)/(num_comm * window_size * iter_num);
 
 
         /* output message rate */
         if(me == 0) {
-            printf("%d\t%d\t%d\t%d\t\t%.2lf Gbps\t%.2lf usec\t%.2lf msg/s\n", n_send_process, x_send_thread,
+            printf("%d\t%d\t%d\t%d\t%d(%d)\t%.2lf Gbps\t%.2lf usec\t%.2lf msg/s\n",
+                                              n_send_process, x_send_thread,
                                               m_recv_process, y_recv_thread,
+                                              msg_size, window_size,
                                               bandwidth,
                                               latency,
                                               msg_rate);
