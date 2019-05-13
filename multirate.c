@@ -50,7 +50,7 @@ static pthread_barrier_t barrier;
 
 void test_init(void);
 
-MPI_Comm *comm;
+MPI_Comm *comms;
 MPI_Comm sender_comm;
 MPI_Comm recver_comm;
 
@@ -335,7 +335,7 @@ void *comm_alltoall(void *info)
                         comm_offset = ((local_rank*x_send_thread*y_recv_thread) + (tid * y_recv_thread) + j) * separated_comm;
 
                         for(k=0;k<window_size;k++){
-                            MPI_Isend(buffer, msg_size, MPI_BYTE, receiver_offset+i, j, comm[comm_offset], &request[offset+k]);
+                            MPI_Isend(buffer, msg_size, MPI_BYTE, receiver_offset+i, j, comms[comm_offset], &request[offset+k]);
                         }
                     }
                 }
@@ -371,7 +371,7 @@ void *comm_alltoall(void *info)
                         comm_offset = ((i*x_send_thread*y_recv_thread) + (j * y_recv_thread) + tid ) * separated_comm;
                         /** printf("%d: posting data irecv to %d with tag %d\n",me, (2*i),tid); */
                         for(k=0;k<window_size;k++){
-                            MPI_Irecv(buffer, msg_size, MPI_BYTE, i, tid, comm[comm_offset], &request[offset+k]);
+                            MPI_Irecv(buffer, msg_size, MPI_BYTE, i, tid, comms[comm_offset], &request[offset+k]);
                         }
                     }
                 }
@@ -493,14 +493,14 @@ void test_init(void)
             num_threads = y_recv_thread;
 
         id =     (pthread_t*)   malloc(sizeof(pthread_t)   * num_threads);
-        comm =   (MPI_Comm*)    malloc(sizeof(MPI_Comm)    * num_comm);
+        comms =   (MPI_Comm*)    malloc(sizeof(MPI_Comm)    * num_comm);
         t_info = (thread_info*) malloc(sizeof(thread_info) * num_threads);
 
         pthread_barrier_init(&barrier, NULL, num_threads);
 
         /* Duplicate communicator */
         for(i=0;i<num_comm;i++){
-            MPI_Comm_dup(MPI_COMM_WORLD, &comm[i]);
+            MPI_Comm_dup(MPI_COMM_WORLD, &comms[i]);
         }
 
         /* Sync */
@@ -520,10 +520,10 @@ void test_init(void)
                         t_info[i].my_pair = (me+1)%2;
                         t_info[i].comm = MPI_COMM_WORLD;
                         if (separated_comm)
-                            t_info[i].comm = comm[i];
+                            t_info[i].comm = comms[i];
                     } else if (pairwise_mode == MULTIRATE_PAIRWISE_PROCESS_PROCESS) {
                         /* MULTIRATE_PAIRWISE_PROCESS */
-                        t_info[i].comm = comm[i];
+                        t_info[i].comm = comms[i];
                         if (i_am_sender)
                             t_info[i].my_pair = (size/2+me);
                         else
@@ -567,7 +567,7 @@ void test_init(void)
 
         /* output message rate */
         if(me == 0) {
-            printf("%d\t%d\t%d\t%d\t%d(%d)\t%.2lf Gbps\t%.2lf usec\t%.2lf msg/s\n",
+            printf("%d\t%d\t%d\t%d\t%d\t%d\t%.2lf Gbps\t%.2lf usec\t%.2lf msg/s\n",
                                               n_send_process, x_send_thread,
                                               m_recv_process, y_recv_thread,
                                               msg_size, window_size,
