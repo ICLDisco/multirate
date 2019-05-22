@@ -2,11 +2,35 @@
 
 This is multithreaded MPI communication benchmark with multiple flavors.
 
-## Pairwise
-Pairwise benchmark measures multithreaded injection rate between 2 processes. Each process will create number of thread pairs to perform ping-ping with each other and measure agregated injection rate. The MPI binding should allow each thread to use the full CPU core (ie, bind MPI process to the whole node or socket). The window size determined how many message is posted per iteration.
+Benchmark has two modes: Pairwise and Alltoall.
 
-Usage: `mpirun ./pairwise -t (num_thread_pair) -s (msg_size) -w (window_size) -i (iteration)`
+Usage: `mpirun ./multirate (options)`
 
-## Known problem
-- pairwise will sometime segfault with Open MPI. If this happens, just run again. This does not affect the correctness of the benchnmark.
+Available options:
+```
+Communication Pattern (pick one):
+-p : Operate in Pairwise mode. (default)
+-a : Operate in Alltoall mode.
+
+Alltoall mode options:
+-n (k) : number of sender processes
+-m (k) : number of receiver processes
+-x (k) : number of sender threads
+-y (k) : number of receiver processes
+
+Workload Adjustment:
+-t : num_thread_pair (pairwise only) 
+-s : message size
+-w : window size.
+-i : number of iteration
+
+Additional test:
+-c : use separated communicator for each pair.
+-o : ignore MPI message ordering (allow_overtaking)
+
+```
+
+## General Idea
+- Benchmark does a set of warmup before taking measurements.
+- Benchmark always pre-posted receive.
 
