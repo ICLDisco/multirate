@@ -42,6 +42,7 @@ double g_start;
 
 int mode;
 int pairwise_mode;
+int allow_overtaking = 0;
 
 char *mmap_filename = "/scratch/local/arm/mmap_t2p";
 int *shm_ready;
@@ -149,8 +150,11 @@ void preprocess_args(int argc, char **argv)
 void process_args(int argc, char **argv)
 {
     int c;
-    while((c = getopt(argc,argv, "n:m:s:i:w:D:x:y:cpat:")) != -1){
+    while((c = getopt(argc,argv, "n:m:s:i:w:D:x:y:cpat:o")) != -1){
         switch (c){
+            case 'o':
+                allow_overtaking = 1;
+                break;
             case 'n':
                 n_send_process = atoi(optarg);
                 break;
@@ -497,6 +501,13 @@ void test_init(void)
         t_info = (thread_info*) malloc(sizeof(thread_info) * num_threads);
 
         pthread_barrier_init(&barrier, NULL, num_threads);
+
+        if (allow_overtaking) {
+            MPI_Info info;
+            MPI_Comm_get_info(MPI_COMM_WORLD, &info);
+            MPI_Info_set(info, "mpi_assert_allow_overtaking", "true");
+            MPI_Comm_set_info(MPI_COMM_WORLD, info);
+        }
 
         /* Duplicate communicator */
         for(i=0;i<num_comm;i++){
