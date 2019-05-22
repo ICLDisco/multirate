@@ -2,6 +2,8 @@
 
 This is multithreaded MPI communication benchmark with multiple flavors.
 
+To make, just run `make` with the provided makefile.
+
 Benchmark has two modes: Pairwise and Alltoall.
 
 Usage: `mpirun ./multirate (options)`
@@ -31,6 +33,8 @@ Additional test:
 ```
 
 ## General Idea
+- Benchmark expected block process placement for process/hybrid mode measurements. ie. node0=rank(0,1,2,3):node1=rank(4,5,6,7)
+- Benchmark expected 1 process per node for thread mode measurement.
 - Benchmark does a set of warmup before taking measurements.
 - Benchmark always pre-posted receive.
 
