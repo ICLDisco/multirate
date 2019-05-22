@@ -44,8 +44,8 @@ int mode;
 int pairwise_mode;
 int allow_overtaking = 0;
 
-char *mmap_filename = "/scratch/local/arm/mmap_t2p";
-int *shm_ready;
+/** char *mmap_filename = "/scratch/local/arm/mmap_t2p"; */
+/** int *shm_ready; */
 
 static pthread_barrier_t barrier;
 
